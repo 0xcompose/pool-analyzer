@@ -1,0 +1,73 @@
+name: CI
+
+on:
+    push:
+        branches: [main, develop]
+    pull_request:
+        branches: [main, develop]
+
+jobs:
+    pre-commit-checks:
+        name: Pre-commit Checks
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0 # Needed for commitlint
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "20"
+                  cache: "yarn"
+
+            - name: Install dependencies
+              run: yarn install --frozen-lockfile
+
+            - name: Type check
+              run: yarn check-types
+
+            - name: Lint
+              run: yarn lint
+
+            - name: Format check
+              run: yarn format:check
+
+            - name: Test
+              run: yarn test
+
+            - name: Commit message lint (for PRs)
+              if: github.event_name == 'pull_request'
+              run: |
+                  # Get the commit messages from the PR
+                  git log --oneline origin/${{ github.base_ref }}..HEAD --pretty=format:"%s" > commit_messages.txt
+
+                  # Check each commit message
+                  while IFS= read -r commit_msg; do
+                    echo "$commit_msg" | yarn commitlint
+                  done < commit_messages.txt
+
+    lint-staged-check:
+        name: Lint-staged Check
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "20"
+                  cache: "yarn"
+
+            - name: Install dependencies
+              run: yarn install --frozen-lockfile
+
+            - name: Run lint-staged
+              run: |
+                  # Simulate what lint-staged would do
+                  yarn lint --fix
+                  yarn format
