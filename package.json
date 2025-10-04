@@ -67,5 +67,8 @@
 		"ts-node": "^10.9.2",
 		"typescript": "^5.9.3",
 		"typescript-eslint": "^8.45.0"
+	},
+	"dependencies": {
+		"@spread-solvers/evm-toolchain": "^0.0.5"
 	}
 }
