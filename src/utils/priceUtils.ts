@@ -41,20 +41,23 @@ export class PriceUtils {
 	}
 
 	/**
-	 * Format large numbers with appropriate suffixes (K, M, B)
+	 * Format large numbers using scientific notation
+	 * Handles negative numbers by formatting absolute value and preserving sign
 	 */
 	static formatLargeNumber(value: bigint | number): string {
 		const num = typeof value === "bigint" ? Number(value) : value
+		const isNegative = num < 0
+		const absNum = Math.abs(num)
 
-		if (num >= 1e9) {
-			return (num / 1e9).toFixed(2) + "B"
-		} else if (num >= 1e6) {
-			return (num / 1e6).toFixed(2) + "M"
-		} else if (num >= 1e3) {
-			return (num / 1e3).toFixed(2) + "K"
+		// Use scientific notation for numbers >= 1000
+		if (absNum >= 1000) {
+			const formatted = absNum.toExponential(2)
+			return isNegative ? "-" + formatted : formatted
+		} else {
+			// For smaller numbers, just use fixed decimal
+			const formatted = absNum.toFixed(2)
+			return isNegative ? "-" + formatted : formatted
 		}
-
-		return num.toFixed(2)
 	}
 
 	/**
@@ -165,5 +168,131 @@ export class PriceUtils {
 			token0Fees: (liquidity * feeGrowth0Delta) / BigInt(2 ** 128),
 			token1Fees: (liquidity * feeGrowth1Delta) / BigInt(2 ** 128),
 		}
+	}
+
+	/**
+	 * Calculate token amounts from liquidity at a specific tick
+	 * Based on Uniswap V3's liquidity math: L = sqrt(x * y)
+	 * @param liquidity - The total liquidity amount
+	 * @param tickIndex - The tick index
+	 * @param token0Decimals - Token0 decimal places
+	 * @param token1Decimals - Token1 decimal places
+	 * @returns Object with token0Amount and token1Amount
+	 */
+	static calculateTokenAmountsFromLiquidity(
+		liquidity: bigint,
+		tickIndex: number,
+		token0Decimals: number,
+		token1Decimals: number,
+	): { token0Amount: bigint; token1Amount: bigint } {
+		const liquidityNum = Number(liquidity)
+
+		// Calculate price at this tick
+		const price = this.tickToPrice(tickIndex)
+
+		// Adjust price for decimal differences
+		const adjustedPrice = price / Math.pow(10, token1Decimals - token0Decimals)
+
+		// For Uniswap V3: L = sqrt(x * y) where x = token0 amount, y = token1 amount
+		// And y = x * price, so L = sqrt(x * x * price) = x * sqrt(price)
+		// Therefore: x = L / sqrt(price), y = L * sqrt(price)
+
+		const sqrtPrice = Math.sqrt(adjustedPrice)
+
+		// Calculate token amounts
+		const token0Amount = Math.floor(liquidityNum / sqrtPrice)
+		const token1Amount = Math.floor(liquidityNum * sqrtPrice)
+
+		return {
+			token0Amount: BigInt(Math.floor(token0Amount)),
+			token1Amount: BigInt(Math.floor(token1Amount)),
+		}
+	}
+
+	/**
+	 * Calculate token amounts for a liquidity range (between two ticks)
+	 * @param liquidity - The total liquidity amount
+	 * @param lowerTick - Lower tick of the range
+	 * @param upperTick - Upper tick of the range
+	 * @param currentTick - Current tick (price)
+	 * @param token0Decimals - Token0 decimal places
+	 * @param token1Decimals - Token1 decimal places
+	 * @returns Object with token0Amount and token1Amount
+	 */
+	static calculateTokenAmountsInRange(
+		liquidity: bigint,
+		lowerTick: number,
+		upperTick: number,
+		currentTick: number,
+		token0Decimals: number,
+		token1Decimals: number,
+	): { token0Amount: bigint; token1Amount: bigint } {
+		const liquidityNum = Number(liquidity)
+
+		// Calculate prices at ticks
+		const lowerPrice = this.tickToPrice(lowerTick)
+		const upperPrice = this.tickToPrice(upperTick)
+		const currentPrice = this.tickToPrice(currentTick)
+
+		// Adjust prices for decimal differences
+		const decimalAdjustment = Math.pow(10, token1Decimals - token0Decimals)
+		const adjustedLowerPrice = lowerPrice / decimalAdjustment
+		const adjustedUpperPrice = upperPrice / decimalAdjustment
+		const adjustedCurrentPrice = currentPrice / decimalAdjustment
+
+		let token0Amount = 0
+		let token1Amount = 0
+
+		// If current price is below the range, all liquidity is in token0
+		if (adjustedCurrentPrice <= adjustedLowerPrice) {
+			token0Amount =
+				(liquidityNum * (Math.sqrt(adjustedUpperPrice) - Math.sqrt(adjustedLowerPrice))) /
+				Math.sqrt(adjustedLowerPrice * adjustedUpperPrice)
+		}
+		// If current price is above the range, all liquidity is in token1
+		else if (adjustedCurrentPrice >= adjustedUpperPrice) {
+			token1Amount = liquidityNum * (Math.sqrt(adjustedUpperPrice) - Math.sqrt(adjustedLowerPrice))
+		}
+		// If current price is within the range, liquidity is split
+		else {
+			token0Amount =
+				(liquidityNum * (Math.sqrt(adjustedUpperPrice) - Math.sqrt(adjustedCurrentPrice))) /
+				Math.sqrt(adjustedCurrentPrice * adjustedUpperPrice)
+			token1Amount = liquidityNum * (Math.sqrt(adjustedCurrentPrice) - Math.sqrt(adjustedLowerPrice))
+		}
+
+		return {
+			token0Amount: BigInt(Math.floor(Math.max(0, token0Amount))),
+			token1Amount: BigInt(Math.floor(Math.max(0, token1Amount))),
+		}
+	}
+
+	/**
+	 * Format token amount with proper decimals
+	 * @param amount - Token amount in wei/smallest unit
+	 * @param decimals - Token decimal places
+	 * @param displayDecimals - Number of decimal places to display (default: 6)
+	 * @returns Formatted string
+	 */
+	static formatTokenAmount(amount: bigint, decimals: number, displayDecimals: number = 6): string {
+		const divisor = BigInt(Math.pow(10, decimals))
+		const wholePart = amount / divisor
+		const fractionalPart = amount % divisor
+
+		if (fractionalPart === 0n) {
+			return wholePart.toString()
+		}
+
+		const fractionalStr = fractionalPart.toString().padStart(decimals, "0")
+		const displayFractional = fractionalStr.substring(0, displayDecimals)
+
+		// Remove trailing zeros
+		const trimmedFractional = displayFractional.replace(/0+$/, "")
+
+		if (trimmedFractional === "") {
+			return wholePart.toString()
+		}
+
+		return `${wholePart}.${trimmedFractional}`
 	}
 }

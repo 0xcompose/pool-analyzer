@@ -3,23 +3,7 @@
 	"version": "0.0.2",
 	"description": "TypeScript project template",
 	"author": "Spread Solvers Collective",
-	"main": "dist/index.js",
-	"types": "dist/index.d.ts",
-	"private": false,
-	"files": [
-		"dist/**/*",
-		"README.md",
-		"LICENSE"
-	],
-	"exports": {
-		".": {
-			"types": "./dist/index.d.ts",
-			"import": "./dist/index.js",
-			"require": "./dist/index.js"
-		}
-	},
 	"license": "MIT",
-	"type": "module",
 	"scripts": {
 		"prepare": "husky",
 		"check-types": "tsc --noEmit",
@@ -54,6 +38,7 @@
 	"devDependencies": {
 		"@commitlint/config-conventional": "^20.0.0",
 		"@eslint/js": "^9.37.0",
+		"@total-typescript/tsconfig": "^1.0.4",
 		"@types/node": "^24.6.2",
 		"commitlint": "^20.1.0",
 		"eslint": "^9.37.0",
@@ -65,10 +50,14 @@
 		"prettier": "3.5.3",
 		"prettier-plugin-organize-imports": "4.1.0",
 		"ts-node": "^10.9.2",
+		"tsx": "^4.20.6",
 		"typescript": "^5.9.3",
 		"typescript-eslint": "^8.45.0"
 	},
 	"dependencies": {
-		"@spread-solvers/evm-toolchain": "^0.0.5"
+		"@spread-solvers/evm-toolchain": "^0.0.21",
+		"asciichart": "^1.5.25",
+		"cli-table3": "^0.6.5",
+		"dotenv": "^17.2.3"
 	}
 }

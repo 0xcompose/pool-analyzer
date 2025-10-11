@@ -1,16 +1,35 @@
-import { BaseContract, ChainClientService } from "@spread-solvers/evm-toolchain"
-import { Address, getContract, GetContractReturnType, PublicClient } from "viem"
-import { UNISWAP_V3_POOL_ABI } from "../abi/UniswapV3Pool.js"
-import { UniswapV3PoolContract as IUniswapV3PoolContract } from "../types/uniswap-v3.js"
+import { BaseContract, ChainClientService, Token } from "@spread-solvers/evm-toolchain"
+import { type Address, getContract, type GetContractReturnType, type PublicClient } from "viem"
+import { UNISWAP_V3_POOL_ABI } from "../../abi/UniswapV3Pool"
+
+/**
+ * Tick data structure for output
+ */
+export interface TickData {
+	liquidityGross: bigint
+	liquidityNet: bigint
+	feeGrowthOutside0X128: bigint
+	feeGrowthOutside1X128: bigint
+	tickCumulativeOutside: bigint
+	secondsPerLiquidityOutsideX128: bigint
+	secondsOutside: bigint
+	initialized: boolean
+}
 
 /**
  * UniswapV3PoolContract provides a typed interface for interacting with Uniswap V3 pool contracts.
  * It extends BaseContract and implements the IUniswapV3PoolContract interface.
  */
-export class UniswapV3PoolContract extends BaseContract implements IUniswapV3PoolContract {
+export class UniV3Pool extends BaseContract {
 	private readonly contract: GetContractReturnType<typeof UNISWAP_V3_POOL_ABI, PublicClient, Address>
 
-	constructor(chainClient: ChainClientService, poolAddress: Address, chainId: number) {
+	constructor(
+		chainClient: ChainClientService,
+		poolAddress: Address,
+		chainId: number,
+		readonly token0: Token,
+		readonly token1: Token,
+	) {
 		super(chainClient, poolAddress, chainId)
 
 		this.contract = getContract({
@@ -62,27 +81,11 @@ export class UniswapV3PoolContract extends BaseContract implements IUniswapV3Poo
 	}
 
 	/**
-	 * Returns the address of the first token in the pool.
-	 * @returns Promise resolving to the token0 address
-	 */
-	async token0() {
-		return await this.contract.read.token0()
-	}
-
-	/**
-	 * Returns the address of the second token in the pool.
-	 * @returns Promise resolving to the token1 address
-	 */
-	async token1() {
-		return await this.contract.read.token1()
-	}
-
-	/**
 	 * Returns tick data for a specific tick.
 	 * @param tick - The tick index to query
 	 * @returns Promise resolving to tick data including liquidity and fee growth
 	 */
-	async ticks(tick: number) {
+	async ticks(tick: number): Promise<TickData> {
 		const result = await this.contract.read.ticks([tick])
 		return {
 			liquidityGross: result[0],
