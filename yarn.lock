@@ -527,6 +527,11 @@
   resolved "https://registry.npmjs.org/@tsconfig/node16/-/node16-1.0.4.tgz"
   integrity sha512-vxhUy4J8lyeyinH7Azl1pdd43GJhZH/tP2weN8TntQblOY+A0XbT8DJk1/oCPuOOyg/Ja757rG0CgHcWC8OfMA==
 
+"@types/asciichart@^1.5.8":
+  version "1.5.8"
+  resolved "https://registry.yarnpkg.com/@types/asciichart/-/asciichart-1.5.8.tgz#93b0c85674421905dab52bbb03562707bf8e896b"
+  integrity sha512-8yzgCUybv8/yUfj4WeTh7G+V+AxU7AzwsF2CrkTtARKHdrxE/EiByF2efUMj6qdm87tENucNu6pLs22RWU0H7g==
+
 "@types/conventional-commits-parser@^5.0.0":
   version "5.0.1"
   resolved "https://registry.yarnpkg.com/@types/conventional-commits-parser/-/conventional-commits-parser-5.0.1.tgz#8cb81cf170853496cbc501a3b32dcf5e46ffb61a"
