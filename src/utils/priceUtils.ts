@@ -26,6 +26,21 @@ export class PriceUtils {
 		return Math.floor(Math.log(price) / Math.log(1.0001))
 	}
 
+	static tickToPriceInQuoteTokens(
+		tick: number,
+		token0Decimals: number,
+		token1Decimals: number,
+		zeroTokenIsQuoteToken: boolean,
+	): number {
+		let price = this.tickToPrice(tick)
+
+		const adjustedPrice = price / Math.pow(10, token1Decimals - token0Decimals)
+
+		if (zeroTokenIsQuoteToken) return 1 / adjustedPrice
+
+		return adjustedPrice
+	}
+
 	/**
 	 * Calculate price from tick
 	 */
